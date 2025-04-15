@@ -16,9 +16,14 @@ const GoogleAuthCallback: React.FC = () => {
     createDebugOverlay();
     addToDebugOverlay('Google Auth Callback Page Loaded');
     
+    // Check for a processed code flag in sessionStorage
+    const processedCode = sessionStorage.getItem('processedAuthCode');
+    const searchParams = new URLSearchParams(location.search);
+    const currentCode = searchParams.get('code');
+    
     const processAuth = async () => {
       // Prevent multiple processing of the same code
-      if (codeProcessed) {
+      if (codeProcessed || (processedCode && processedCode === currentCode)) {
         addToDebugOverlay('Code already processed, skipping');
         return;
       }
@@ -55,6 +60,11 @@ const GoogleAuthCallback: React.FC = () => {
         // Mark code as processed to prevent duplicate exchanges
         setCodeProcessed(true);
         
+        // Store the code in sessionStorage to prevent reuse across page refreshes
+        if (code) {
+          sessionStorage.setItem('processedAuthCode', code);
+        }
+        
         // Exchange the code for tokens
         addToDebugOverlay(`Received auth code (${code.substring(0, 10)}...), exchanging for tokens`);
         const success = await authenticateCalendar(code);
@@ -67,6 +77,9 @@ const GoogleAuthCallback: React.FC = () => {
           
           // Clear the authorization code from the URL to prevent reuse
           window.history.replaceState({}, document.title, '/auth/google/callback');
+          
+          // Store authentication success in sessionStorage
+          sessionStorage.setItem('calendarAuthSuccess', 'true');
           
           // Redirect to dashboard after a short delay
           setTimeout(() => {
@@ -89,6 +102,16 @@ const GoogleAuthCallback: React.FC = () => {
     
     processAuth();
   }, [location, authenticateCalendar, navigate, codeProcessed]);
+  
+  // Clean up function to remove sessionStorage items when navigating away
+  useEffect(() => {
+    return () => {
+      // Only clear if authentication was successful
+      if (status === 'success') {
+        sessionStorage.removeItem('processedAuthCode');
+      }
+    };
+  }, [status]);
 
   return (
     <div style={{ 

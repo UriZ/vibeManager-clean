@@ -5,7 +5,7 @@
  */
 
 // Enable or disable debug mode
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 /**
  * Logs a debug message to the console
